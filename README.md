@@ -1,2 +1,1 @@
-# oaiaux
-OpenAI helper
+OpenAI helper for Go.
