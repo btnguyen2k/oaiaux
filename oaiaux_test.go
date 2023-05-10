@@ -25,7 +25,7 @@ func TestCountTokens(t *testing.T) {
 	}
 	for _, testCase := range testData {
 		t.Run(testCase.name, func(t *testing.T) {
-			value := CountTokens(testCase.input)
+			value := CountTokens(testCase.input, Option{"encoding", "p50k_base"})
 			if value != testCase.expected {
 				t.Fatalf("%s failed for input <%s>: expected %#v but received %#v", testName+"/"+testCase.name, testCase.input, testCase.expected, value)
 			}
@@ -54,10 +54,7 @@ func TestEstimateTokens(t *testing.T) {
 	for _, testCase := range testData {
 		t.Run(testCase.name, func(t *testing.T) {
 			value := EstimateTokens(testCase.input)
-			fmt.Printf("%s: <input: %s> / expected: %#v vs received: %#v\n", testName+"/"+testCase.name, testCase.input, testCase.expected, value)
-			// if value != testCase.expected {
-			// t.Fatalf("%s failed for input <%s>: expected %#v but received %#v", testName+"/"+testCase.name, testCase.input, testCase.expected, value)
-			// }
+			fmt.Printf("%s: <input: %s> / expected: %#v vs received: %#v / diff: %#v\n", testName+"/"+testCase.name, testCase.input, testCase.expected, value, value-testCase.expected)
 		})
 	}
 }
