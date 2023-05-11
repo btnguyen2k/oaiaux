@@ -67,6 +67,42 @@ Sample usage:
 				fmt.Printf("Embeddings<%#v/%#v>: length %#v\n", i, d.Object, len(d.Embedding))
 			}
 		}
+
+
+		// prepare the input for chat-completions API call
+		chatPrompt := &oaiaux.ChatPromptInput{
+			Model:       "gpt-3.5-turbo",
+			Temperature: 0.7,
+			Messages: []oaiaux.ChatMessage{
+				{Role: "system", Content: "You are a friendly assistant."},
+				{Role: "user", Content: "What is GPT?"},
+			},
+			MaxTokens: 150,
+		}
+		// get completions
+		chatCompletions := clientOpenAI.ChatCompletions(chatPrompt)
+		if chatCompletions.Error != nil {
+			panic(fmt.Errors("Error: %s\n", chatCompletions.Error))
+		} else if completions.StatusCode != 200 {
+			panic(fmt.Errors("Error: %#v\n", chatCompletions.StatusCode))
+		} else {
+			for i, c := range chatCompletions.Choices {
+				fmt.Printf("Completion<%#v/%#v>: %#v\n", i, c.FinishReason, c.Message)
+			}
+		}
+
+		// note: for Azure OpenAI service, supply the model deployment name as the value of the "Model" parameter
+		chatPrompt.Model = "gpt-35-turbo" // Azure OpenAI currently does not allow character '.' in the model deployment name
+		chatCompletions = clientAOAI.ChatCompletions(chatPrompt)
+		if chatCompletions.Error != nil {
+			panic(fmt.Errors("Error: %s\n", chatCompletions.Error))
+		} else if completions.StatusCode != 200 {
+			panic(fmt.Errors("Error: %#v\n", chatCompletions.StatusCode))
+		} else {
+			for i, c := range chatCompletions.Choices {
+				fmt.Printf("Completion<%#v/%#v>: %#v\n", i, c.FinishReason, c.Message)
+			}
+		}
 	}
 */
 package oaiaux
@@ -156,6 +192,45 @@ type BaseResponse struct {
 	StatusCode int   `json:"-"`
 }
 
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Name    string `json:"name,omitempty"`
+}
+
+type ChatPromptInput struct {
+	Model            string         `json:"model,omitempty"`
+	Messages         []ChatMessage  `json:"messages"`
+	Temperature      float64        `json:"temperature"`
+	TopP             float64        `json:"top_p"`
+	N                int            `json:"n"`
+	Stream           bool           `json:"stream"`
+	Stop             []string       `json:"stop,omitempty"`
+	MaxTokens        int            `json:"max_tokens"`
+	PresencePenalty  float64        `json:"presence_penalty"`
+	FrequencyPenalty float64        `json:"frequency_penalty"`
+	LogitBias        map[string]int `json:"logit_bias,omitempty"`
+	User             string         `json:"user,omitempty"`
+}
+
+type ChatCompletionsOutput struct {
+	BaseResponse `json:"-"`
+	Id           string `json:"id"`
+	Object       string `json:"object"`
+	Created      int64  `json:"created"`
+	Model        string `json:"model"`
+	Usage        *struct {
+		CompletionTokens int `json:"completion_tokens"`
+		PromptTokens     int `json:"prompt_tokens"`
+		TotalTokens      int `json:"total_tokens"`
+	} `json:"usage"`
+	Choices []struct {
+		Message      ChatMessage `json:"message"`
+		Index        int         `json:"index"`
+		FinishReason string      `json:"finish_reason"`
+	} `json:"choices"`
+}
+
 type PromptInput struct {
 	Model            string         `json:"model,omitempty"`
 	Prompt           string         `json:"prompt"`
@@ -221,6 +296,9 @@ type Client interface {
 	// Completions make a 'completions' API call and returns the completions output.
 	Completions(prompt *PromptInput) *CompletionsOutput
 
+	// ChatCompletions make a 'chat-completions' API call and returns the completions output.
+	ChatCompletions(prompt *ChatPromptInput) *ChatCompletionsOutput
+
 	// Embeddings make an 'embeddings' API call and returns the embeddings output.
 	Embeddings(input *EmbeddingsInput) *EmbeddingsOutput
 }
@@ -249,11 +327,67 @@ func (bc *BaseClient) preparePrompt(prompt *PromptInput) *PromptInput {
 	if prompt.BestOf < prompt.N {
 		prompt.BestOf = prompt.N
 	}
+
+	if 0.0 == prompt.Temperature && 0.0 == prompt.TopP {
+		prompt.Temperature = 1.0
+		prompt.TopP = 1.0
+	}
+	if prompt.Temperature < 0.0 || prompt.Temperature > 1.0 {
+		prompt.Temperature = 1.0
+	}
+	if prompt.TopP < 0.0 || prompt.TopP > 1.0 {
+		prompt.TopP = 1.0
+	}
+	if 0.0 < prompt.Temperature && prompt.Temperature < 1.0 {
+		prompt.TopP = 1.0
+	}
+	if 0.0 < prompt.TopP && prompt.TopP < 1.0 {
+		prompt.Temperature = 1.0
+	}
+
+	return prompt
+}
+
+func (bc *BaseClient) prepareChatPrompt(prompt *ChatPromptInput) *ChatPromptInput {
+	if prompt.MaxTokens <= 0 {
+		prompt.MaxTokens = 100
+	}
+	if prompt.N < 1 {
+		prompt.N = 1
+	}
+
+	if 0.0 == prompt.Temperature && 0.0 == prompt.TopP {
+		prompt.Temperature = 1.0
+		prompt.TopP = 1.0
+	}
+	if prompt.Temperature < 0.0 || prompt.Temperature > 1.0 {
+		prompt.Temperature = 1.0
+	}
+	if prompt.TopP < 0.0 || prompt.TopP > 1.0 {
+		prompt.TopP = 1.0
+	}
+	if 0.0 < prompt.Temperature && prompt.Temperature < 1.0 {
+		prompt.TopP = 1.0
+	}
+	if 0.0 < prompt.TopP && prompt.TopP < 1.0 {
+		prompt.Temperature = 1.0
+	}
+
 	return prompt
 }
 
 func (bc *BaseClient) buildCompletionsOutput(resp *gjrc.GjrcResponse) *CompletionsOutput {
 	completions := &CompletionsOutput{BaseResponse: BaseResponse{Error: resp.Error()}}
+	if completions.Error == nil {
+		err := resp.Unmarshal(completions)
+		completions.Error = err
+	}
+	completions.StatusCode = resp.StatusCode()
+	return completions
+}
+
+func (bc *BaseClient) buildChatCompletionsOutput(resp *gjrc.GjrcResponse) *ChatCompletionsOutput {
+	completions := &ChatCompletionsOutput{BaseResponse: BaseResponse{Error: resp.Error()}}
 	if completions.Error == nil {
 		err := resp.Unmarshal(completions)
 		completions.Error = err
@@ -325,6 +459,23 @@ func (c *AzureOpenAIClient) Completions(prompt *PromptInput) *CompletionsOutput 
 	return c.buildCompletionsOutput(resp)
 }
 
+func (c *AzureOpenAIClient) buildUrlChatCompletions(prompt *ChatPromptInput) string {
+	url := "https://{azure-resource-name}.openai.azure.com/openai/deployments/{model}/chat/completions?api-version={azure-api-version}"
+	url = strings.ReplaceAll(url, "{azure-resource-name}", c.resourceName)
+	url = strings.ReplaceAll(url, "{model}", prompt.Model)
+	url = strings.ReplaceAll(url, "{azure-api-version}", c.apiVersion)
+	return url
+}
+
+// ChatCompletions implements Client.ChatCompletions
+func (c *AzureOpenAIClient) ChatCompletions(prompt *ChatPromptInput) *ChatCompletionsOutput {
+	apiUrl := c.buildUrlChatCompletions(prompt)
+	header := c.buildRequestHeaders()
+	prompt = c.prepareChatPrompt(prompt)
+	resp := c.gjrc.PostJson(apiUrl, prompt, gjrc.RequestMeta{Header: header})
+	return c.buildChatCompletionsOutput(resp)
+}
+
 func (c *AzureOpenAIClient) buildUrlEmbeddings(input *EmbeddingsInput) string {
 	url := "https://{azure-resource-name}.openai.azure.com/openai/deployments/{model}/embeddings?api-version={azure-api-version}"
 	url = strings.ReplaceAll(url, "{azure-resource-name}", c.resourceName)
@@ -383,6 +534,20 @@ func (c *PlatformOpenAIClient) Completions(prompt *PromptInput) *CompletionsOutp
 	prompt = c.preparePrompt(prompt)
 	resp := c.gjrc.PostJson(apiUrl, prompt, gjrc.RequestMeta{Header: header})
 	return c.buildCompletionsOutput(resp)
+}
+
+func (c *PlatformOpenAIClient) buildUrlChatCompletions(prompt *ChatPromptInput) string {
+	url := "https://api.openai.com/v1/chat/completions"
+	return url
+}
+
+// ChatCompletions implements Client.ChatCompletions
+func (c *PlatformOpenAIClient) ChatCompletions(prompt *ChatPromptInput) *ChatCompletionsOutput {
+	apiUrl := c.buildUrlChatCompletions(prompt)
+	header := c.buildRequestHeaders()
+	prompt = c.prepareChatPrompt(prompt)
+	resp := c.gjrc.PostJson(apiUrl, prompt, gjrc.RequestMeta{Header: header})
+	return c.buildChatCompletionsOutput(resp)
 }
 
 func (c *PlatformOpenAIClient) buildUrlEmbeddings(input *EmbeddingsInput) string {
