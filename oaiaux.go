@@ -85,6 +85,11 @@ import (
 	"github.com/tiktoken-go/tokenizer"
 )
 
+const (
+	// Version of oaiaux
+	Version = "0.1.0"
+)
+
 // Flavor specifies which OpenAI "flavor" to use (currently available: platform.openai.com and Azure OpenAI).
 type Flavor int
 
