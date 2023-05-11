@@ -123,7 +123,7 @@ import (
 
 const (
 	// Version of oaiaux
-	Version = "0.1.0"
+	Version = "0.1.1"
 )
 
 // Flavor specifies which OpenAI "flavor" to use (currently available: platform.openai.com and Azure OpenAI).
@@ -570,19 +570,17 @@ func CountTokens(input string, opts ...Option) int {
 	var optList OptionList = opts
 	var enc tokenizer.Codec
 
-	model, err := optList.GetString("model")
-	if model != "" && err == nil {
+	if model, err := optList.GetString("model"); model != "" && err == nil {
 		enc, err = tokenizer.ForModel(tokenizer.Model(model))
 	}
-	if enc == nil || err != nil {
-		encoding, err := optList.GetString("encoding")
-		if encoding != "" && err == nil {
+	if enc == nil {
+		if encoding, err := optList.GetString("encoding"); encoding != "" && err == nil {
 			enc, err = tokenizer.Get(tokenizer.Encoding(encoding))
 		}
 	}
-	if enc == nil || err != nil {
-		enc, err = tokenizer.Get(tokenizer.P50kBase)
-		if enc == nil || err != nil {
+	if enc == nil {
+		enc, _ = tokenizer.Get(tokenizer.P50kBase)
+		if enc == nil {
 			return -1
 		}
 	}
