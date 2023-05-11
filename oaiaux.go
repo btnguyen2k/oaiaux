@@ -1,4 +1,74 @@
-// package aux provides helper utilities to work with OpenAI API.
+/*
+Package aux provides helper utilities to work with OpenAI API.
+
+Sample usage:
+
+	package main
+
+	import (
+		"fmt"
+		"os"
+
+		"github.com/btnguyen2k/oaiaux"
+	)
+
+	func main() {
+		// Azure OpenAI client requires 2 mandatory settings: Azure resource name and Azure OpenAI API key
+		clientAOAI, err := oaiaux.NewClient(oaiaux.AzureOpenAI,
+			oaiaux.Option{Key: oaiaux.OptAzureResourceName, Value: os.Getenv("AZURE_OPENAI_RESOURCE_NAME")},
+			oaiaux.Option{Key: oaiaux.OptAzureApiKey, Value: os.Getenv("AZURE_OPENAI_API_KEY")},
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		// Platform.OpenAI.Com client requires 1 mandatory setting: OpenAI API key
+		// and one optional setting: OpenAI organization id
+		clientOpenAI, err := oaiaux.NewClient(oaiaux.PlatformOpenAI,
+			oaiaux.Option{Key: oaiaux.OptOpenAIApiKey, Value: os.Getenv("OPENAI_API_KEY")},
+			oaiaux.Option{Key: oaiaux.OptOpenAIOrganization, Value: os.Getenv("OPENAI_ORGANIZATION_ID")},
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		// build prompt
+		// note: for Azure OpenAI service, supply the model deployment name as the value of the "Model" parameter
+		prompt := &oaiaux.PromptInput{
+			Model:     "text-davinci-003",
+			Prompt:    "Write a tagline for an ice cream shop.",
+			MaxTokens: 250,
+		}
+		// get completions
+		completions := clientAOAI.Completions(prompt)
+		if completions.Error != nil {
+			panic(fmt.Errorf("Error: %s\n", completions.Error))
+		} else if completions.StatusCode != 200 {
+			panic(fmt.Errorf("Error: %#v\n", completions.StatusCode))
+		} else {
+			for i, c := range completions.Choices {
+				fmt.Printf("Completion<%#v/%#v>: %#v\n", i, c.FinishReason, c.Text)
+			}
+		}
+
+		// prepare the input for embeddings API call
+		embeddingsInput := &oaiaux.EmbeddingsInput{
+			Model: "text-embedding-ada-002",
+			Input: "Cool down with our delicious treats!",
+		}
+		// call API to calculate embeddings vector
+		embeddings := clientOpenAI.Embeddings(input)
+		if embeddings.Error != nil {
+			panic(fmt.Errorf("Error: %s\n", embeddings.Error))
+		} else if embeddings.StatusCode != 200 {
+			panic(fmt.Errorf("Error: %#v\n", embeddings.StatusCode))
+		} else {
+			for i, d := range embeddings.Data {
+				fmt.Printf("Embeddings<%#v/%#v>: length %#v\n", i, d.Object, len(d.Embedding))
+			}
+		}
+	}
+*/
 package oaiaux
 
 import (
@@ -76,6 +146,11 @@ func NewClient(flavor Flavor, opts ...Option) (Client, error) {
 	return nil, fmt.Errorf("unknown flavor %#v", flavor)
 }
 
+type BaseResponse struct {
+	Error      error `json:"-"`
+	StatusCode int   `json:"-"`
+}
+
 type PromptInput struct {
 	Model            string         `json:"model,omitempty"`
 	Prompt           string         `json:"prompt"`
@@ -96,13 +171,12 @@ type PromptInput struct {
 }
 
 type CompletionsOutput struct {
-	Error      error  `json:"-"`
-	StatusCode int    `json:"-"`
-	Id         string `json:"id"`
-	Object     string `json:"object"`
-	Created    int64  `json:"created"`
-	Model      string `json:"model"`
-	Usage      *struct {
+	BaseResponse `json:"-"`
+	Id           string `json:"id"`
+	Object       string `json:"object"`
+	Created      int64  `json:"created"`
+	Model        string `json:"model"`
+	Usage        *struct {
 		CompletionTokens int `json:"completion_tokens"`
 		PromptTokens     int `json:"prompt_tokens"`
 		TotalTokens      int `json:"total_tokens"`
@@ -115,10 +189,35 @@ type CompletionsOutput struct {
 	} `json:"choices"`
 }
 
+type EmbeddingsInput struct {
+	Model     string `json:"model,omitempty"`
+	Input     string `json:"input"`
+	InputType string `json:"input_type,omitempty"`
+	User      string `json:"user,omitempty"`
+}
+
+type EmbeddingsOutput struct {
+	BaseResponse `json:"-"`
+	Object       string `json:"object"`
+	Model        string `json:"model"`
+	Data         []struct {
+		Index     int    `json:"index"`
+		Object    string `json:"object"`
+		Embedding Vector `json:"embedding"`
+	} `json:"data"`
+	Usage *struct {
+		PromptTokens int `json:"prompt_tokens"`
+		TotalTokens  int `json:"total_tokens"`
+	} `json:"usage"`
+}
+
 // Client captures OpenAI REST API.
 type Client interface {
 	// Completions make a 'completions' API call and returns the completions output.
 	Completions(prompt *PromptInput) *CompletionsOutput
+
+	// Embeddings make an 'embeddings' API call and returns the embeddings output.
+	Embeddings(input *EmbeddingsInput) *EmbeddingsOutput
 }
 
 const (
@@ -148,8 +247,8 @@ func (bc *BaseClient) preparePrompt(prompt *PromptInput) *PromptInput {
 	return prompt
 }
 
-func (bc *BaseClient) buildCompletions(resp *gjrc.GjrcResponse) *CompletionsOutput {
-	completions := &CompletionsOutput{Error: resp.Error()}
+func (bc *BaseClient) buildCompletionsOutput(resp *gjrc.GjrcResponse) *CompletionsOutput {
+	completions := &CompletionsOutput{BaseResponse: BaseResponse{Error: resp.Error()}}
 	if completions.Error == nil {
 		err := resp.Unmarshal(completions)
 		completions.Error = err
@@ -157,6 +256,18 @@ func (bc *BaseClient) buildCompletions(resp *gjrc.GjrcResponse) *CompletionsOutp
 	completions.StatusCode = resp.StatusCode()
 	return completions
 }
+
+func (bc *BaseClient) buildEmbeddingsOutput(resp *gjrc.GjrcResponse) *EmbeddingsOutput {
+	embeddings := &EmbeddingsOutput{BaseResponse: BaseResponse{Error: resp.Error()}}
+	if embeddings.Error == nil {
+		err := resp.Unmarshal(embeddings)
+		embeddings.Error = err
+	}
+	embeddings.StatusCode = resp.StatusCode()
+	return embeddings
+}
+
+/*----------------------------------------------------------------------*/
 
 // AzureOpenAIClient is AzureOpenAI-flavor of Client.
 type AzureOpenAIClient struct {
@@ -186,6 +297,12 @@ func (c *AzureOpenAIClient) Init() error {
 	return nil
 }
 
+func (c *AzureOpenAIClient) buildRequestHeaders() http.Header {
+	header := http.Header{}
+	header.Set("api-key", c.apiKey)
+	return header
+}
+
 func (c *AzureOpenAIClient) buildUrlCompletions(prompt *PromptInput) string {
 	url := "https://{azure-resource-name}.openai.azure.com/openai/deployments/{model}/completions?api-version={azure-api-version}"
 	url = strings.ReplaceAll(url, "{azure-resource-name}", c.resourceName)
@@ -197,12 +314,33 @@ func (c *AzureOpenAIClient) buildUrlCompletions(prompt *PromptInput) string {
 // Completions implements Client.Completions
 func (c *AzureOpenAIClient) Completions(prompt *PromptInput) *CompletionsOutput {
 	apiUrl := c.buildUrlCompletions(prompt)
-	header := http.Header{}
-	header.Set("api-key", c.apiKey)
+	header := c.buildRequestHeaders()
 	prompt = c.preparePrompt(prompt)
 	resp := c.gjrc.PostJson(apiUrl, prompt, gjrc.RequestMeta{Header: header})
-	return c.buildCompletions(resp)
+	return c.buildCompletionsOutput(resp)
 }
+
+func (c *AzureOpenAIClient) buildUrlEmbeddings(input *EmbeddingsInput) string {
+	url := "https://{azure-resource-name}.openai.azure.com/openai/deployments/{model}/embeddings?api-version={azure-api-version}"
+	url = strings.ReplaceAll(url, "{azure-resource-name}", c.resourceName)
+	url = strings.ReplaceAll(url, "{model}", input.Model)
+	url = strings.ReplaceAll(url, "{azure-api-version}", c.apiVersion)
+	return url
+}
+
+// Embeddings implements Client.Embeddings
+func (c *AzureOpenAIClient) Embeddings(input *EmbeddingsInput) *EmbeddingsOutput {
+	apiUrl := c.buildUrlEmbeddings(input)
+	header := c.buildRequestHeaders()
+	resp := c.gjrc.PostJson(apiUrl, input, gjrc.RequestMeta{Header: header})
+	if resp.Error() != nil || resp.StatusCode() != 200 {
+		body, _ := resp.Body()
+		fmt.Println(string(body))
+	}
+	return c.buildEmbeddingsOutput(resp)
+}
+
+/*----------------------------------------------------------------------*/
 
 // PlatformOpenAIClient is platform.openai.com-flavor of Client.
 type PlatformOpenAIClient struct {
@@ -223,6 +361,15 @@ func (c *PlatformOpenAIClient) Init() error {
 	return nil
 }
 
+func (c *PlatformOpenAIClient) buildRequestHeaders() http.Header {
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+c.apiKey)
+	if c.organization != "" {
+		header.Set("OpenAI-Organization", c.organization)
+	}
+	return header
+}
+
 func (c *PlatformOpenAIClient) buildUrlCompletions(prompt *PromptInput) string {
 	url := "https://api.openai.com/v1/completions"
 	return url
@@ -231,14 +378,27 @@ func (c *PlatformOpenAIClient) buildUrlCompletions(prompt *PromptInput) string {
 // Completions implements Client.Completions
 func (c *PlatformOpenAIClient) Completions(prompt *PromptInput) *CompletionsOutput {
 	apiUrl := c.buildUrlCompletions(prompt)
-	header := http.Header{}
-	header.Set("Authorization", "Bearer "+c.apiKey)
-	if c.organization != "" {
-		header.Set("OpenAI-Organization", c.organization)
-	}
+	header := c.buildRequestHeaders()
 	prompt = c.preparePrompt(prompt)
 	resp := c.gjrc.PostJson(apiUrl, prompt, gjrc.RequestMeta{Header: header})
-	return c.buildCompletions(resp)
+	return c.buildCompletionsOutput(resp)
+}
+
+func (c *PlatformOpenAIClient) buildUrlEmbeddings(input *EmbeddingsInput) string {
+	url := "https://api.openai.com/v1/embeddings"
+	return url
+}
+
+// Embeddings implements Client.Embeddings
+func (c *PlatformOpenAIClient) Embeddings(input *EmbeddingsInput) *EmbeddingsOutput {
+	apiUrl := c.buildUrlEmbeddings(input)
+	header := c.buildRequestHeaders()
+	resp := c.gjrc.PostJson(apiUrl, input, gjrc.RequestMeta{Header: header})
+	if resp.Error() != nil || resp.StatusCode() != 200 {
+		body, _ := resp.Body()
+		fmt.Println(string(body))
+	}
+	return c.buildEmbeddingsOutput(resp)
 }
 
 /*----------------------------------------------------------------------*/
