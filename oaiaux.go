@@ -357,7 +357,7 @@ func (c *PlatformOpenAIClient) Init() error {
 		return fmt.Errorf("cannot parse setting <%s> %s", OptAzureApiKey, err)
 	}
 
-	c.organization, err = c.opts.GetString(OptOpenAIOrganization)
+	c.organization, _ = c.opts.GetString(OptOpenAIOrganization)
 
 	return nil
 }
@@ -409,13 +409,13 @@ func CountTokens(input string, opts ...Option) int {
 	if model != "" && err == nil {
 		enc, err = tokenizer.ForModel(tokenizer.Model(model))
 	}
-	if enc == nil {
+	if enc == nil || err != nil {
 		encoding, err := optList.GetString("encoding")
 		if encoding != "" && err == nil {
 			enc, err = tokenizer.Get(tokenizer.Encoding(encoding))
 		}
 	}
-	if enc == nil {
+	if enc == nil || err != nil {
 		enc, err = tokenizer.Get(tokenizer.P50kBase)
 		if enc == nil || err != nil {
 			return -1
