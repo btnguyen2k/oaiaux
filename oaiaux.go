@@ -338,10 +338,6 @@ func (c *AzureOpenAIClient) Embeddings(input *EmbeddingsInput) *EmbeddingsOutput
 	apiUrl := c.buildUrlEmbeddings(input)
 	header := c.buildRequestHeaders()
 	resp := c.gjrc.PostJson(apiUrl, input, gjrc.RequestMeta{Header: header})
-	if resp.Error() != nil || resp.StatusCode() != 200 {
-		body, _ := resp.Body()
-		fmt.Println(string(body))
-	}
 	return c.buildEmbeddingsOutput(resp)
 }
 
@@ -399,10 +395,6 @@ func (c *PlatformOpenAIClient) Embeddings(input *EmbeddingsInput) *EmbeddingsOut
 	apiUrl := c.buildUrlEmbeddings(input)
 	header := c.buildRequestHeaders()
 	resp := c.gjrc.PostJson(apiUrl, input, gjrc.RequestMeta{Header: header})
-	if resp.Error() != nil || resp.StatusCode() != 200 {
-		body, _ := resp.Body()
-		fmt.Println(string(body))
-	}
 	return c.buildEmbeddingsOutput(resp)
 }
 
