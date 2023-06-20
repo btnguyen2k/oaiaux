@@ -3,6 +3,7 @@
 ## 2023-06-20 - v0.1.2
 
 - Add new setting `OptOpenAIBaseUrl`.
+- Bug fixes.
 
 ## 2023-05-12 - v0.1.1
 
