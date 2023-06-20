@@ -123,7 +123,7 @@ import (
 
 const (
 	// Version of oaiaux
-	Version = "0.1.1"
+	Version = "0.1.2"
 )
 
 // Flavor specifies which OpenAI "flavor" to use (currently available: platform.openai.com and Azure OpenAI).
@@ -304,12 +304,19 @@ type Client interface {
 }
 
 const (
+	// OptAzureResourceName specifies the Azure OpenAI's resource-name.
 	OptAzureResourceName = "azure-resource-name"
-	OptAzureApiVersion   = "azure-api-version"
-	OptAzureApiKey       = "azure-api-key"
+	// OptAzureApiVersion specifies the version of Azure OpenAI to use (default "2023-03-15-preview").
+	OptAzureApiVersion = "azure-api-version"
+	// OptAzureApiKey specifies the API key used to call Azure OpenAI APIs.
+	OptAzureApiKey = "azure-api-key"
 
-	OptOpenAIApiKey       = "openai-api-key"
-	OptOpenAIOrganization = "openai-Organization"
+	// OptOpenAIApiKey specifies the API key used to call OpenAI APIs.
+	OptOpenAIApiKey = "openai-api-key"
+	// OptOpenAIApiKey specifies the OpenAI's organization name.
+	OptOpenAIOrganization = "openai-organization"
+	// OptOpenAIBaseUrl specifies the custom base url for OpenAI APIs (for example "http://localhost:5123").
+	OptOpenAIBaseUrl = "openai-base-url"
 )
 
 type BaseClient struct {
@@ -498,6 +505,7 @@ func (c *AzureOpenAIClient) Embeddings(input *EmbeddingsInput) *EmbeddingsOutput
 type PlatformOpenAIClient struct {
 	*BaseClient
 	apiKey, organization string
+	baseUrl              string
 }
 
 func (c *PlatformOpenAIClient) Init() error {
@@ -505,10 +513,15 @@ func (c *PlatformOpenAIClient) Init() error {
 
 	c.apiKey, err = c.opts.GetString(OptOpenAIApiKey)
 	if err != nil || c.apiKey == "" {
-		return fmt.Errorf("cannot parse setting <%s> %s", OptAzureApiKey, err)
+		return fmt.Errorf("cannot parse setting <%s> %s", OptOpenAIApiKey, err)
 	}
 
 	c.organization, _ = c.opts.GetString(OptOpenAIOrganization)
+	c.baseUrl, _ = c.opts.GetString(OptOpenAIBaseUrl)
+	c.baseUrl = strings.TrimSuffix(c.baseUrl, "/")
+	if c.baseUrl == "" {
+		c.baseUrl = "https://api.openai.com/v1"
+	}
 
 	return nil
 }
@@ -523,7 +536,7 @@ func (c *PlatformOpenAIClient) buildRequestHeaders() http.Header {
 }
 
 func (c *PlatformOpenAIClient) buildUrlCompletions(prompt *PromptInput) string {
-	url := "https://api.openai.com/v1/completions"
+	url := c.baseUrl + "/completions"
 	return url
 }
 
@@ -537,7 +550,7 @@ func (c *PlatformOpenAIClient) Completions(prompt *PromptInput) *CompletionsOutp
 }
 
 func (c *PlatformOpenAIClient) buildUrlChatCompletions(prompt *ChatPromptInput) string {
-	url := "https://api.openai.com/v1/chat/completions"
+	url := c.baseUrl + "/chat/completions"
 	return url
 }
 
@@ -551,7 +564,7 @@ func (c *PlatformOpenAIClient) ChatCompletions(prompt *ChatPromptInput) *ChatCom
 }
 
 func (c *PlatformOpenAIClient) buildUrlEmbeddings(input *EmbeddingsInput) string {
-	url := "https://api.openai.com/v1/embeddings"
+	url := c.baseUrl + "/embeddings"
 	return url
 }
 
