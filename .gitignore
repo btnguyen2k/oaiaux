@@ -1,2 +1,3 @@
-/vendor/
-/Qnd/
+vendor/
+Qnd/
+.idea/
