@@ -1,11 +1,11 @@
-github.com/btnguyen2k/consu/gjrc v0.2.1 h1:RUgbgs1NDpuUDfY7PSyva8AShyui+ds1MOzmi2k0SfM=
-github.com/btnguyen2k/consu/gjrc v0.2.1/go.mod h1:+aPcD9tY5x8gHH5+RdCqBDvEO4hw4kXruUz+lBG01QI=
-github.com/btnguyen2k/consu/reddo v0.1.4/go.mod h1:6L2l4rRFQlyGWlKxt9SiwYs/wB6SE70oxFcrTo/YLPY=
-github.com/btnguyen2k/consu/reddo v0.1.6/go.mod h1:6L2l4rRFQlyGWlKxt9SiwYs/wB6SE70oxFcrTo/YLPY=
+github.com/btnguyen2k/consu/gjrc v0.2.2 h1:CAY8xPgvtWc7EMTE9gxam/BxMgTRRpc4Hs9QEyYxRUc=
+github.com/btnguyen2k/consu/gjrc v0.2.2/go.mod h1:Sc0NehbI0i8V6FAY9qX1we9XXbWNnrMOb9jNpYqGBWk=
+github.com/btnguyen2k/consu/reddo v0.1.7/go.mod h1:pdY5oIVX3noZIaZu3nvoKZ59+seXL/taXNGWh9xJDbg=
+github.com/btnguyen2k/consu/reddo v0.1.8/go.mod h1:pdY5oIVX3noZIaZu3nvoKZ59+seXL/taXNGWh9xJDbg=
 github.com/btnguyen2k/consu/reddo v0.1.9 h1:NZyEzRcDXzksNMnvZVZyJmGN6ZQQmHg4hIPCPbfsCBE=
 github.com/btnguyen2k/consu/reddo v0.1.9/go.mod h1:pdY5oIVX3noZIaZu3nvoKZ59+seXL/taXNGWh9xJDbg=
-github.com/btnguyen2k/consu/semita v0.1.4 h1:tKvH0PRcaFWumMaFFCIa+NjIotAJGGKeFhEJgm+rC6U=
-github.com/btnguyen2k/consu/semita v0.1.4/go.mod h1:EmOAKM4o+iljiR2kShq3MlIvGrzALnUW4IkgI292p10=
+github.com/btnguyen2k/consu/semita v0.1.5 h1:fu71xNJTbCV8T+6QPJdJu3bxtmLWvTjCepkvujF74+I=
+github.com/btnguyen2k/consu/semita v0.1.5/go.mod h1:fksCe3L4kxiJVnKKhUXKI8mcFdB9974mtedwUVVFu1M=
 github.com/dlclark/regexp2 v1.9.0 h1:pTK/l/3qYIKaRXuHnEnIf7Y5NxfRPfpb7dis6/gdlVI=
 github.com/dlclark/regexp2 v1.9.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
 github.com/tiktoken-go/tokenizer v0.1.0 h1:c1fXriHSR/NmhMDTwUDLGiNhHwTV+ElABGvqhCWLRvY=
