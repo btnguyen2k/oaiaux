@@ -8,5 +8,5 @@ github.com/btnguyen2k/consu/semita v0.1.5 h1:fu71xNJTbCV8T+6QPJdJu3bxtmLWvTjCepk
 github.com/btnguyen2k/consu/semita v0.1.5/go.mod h1:fksCe3L4kxiJVnKKhUXKI8mcFdB9974mtedwUVVFu1M=
 github.com/dlclark/regexp2 v1.9.0 h1:pTK/l/3qYIKaRXuHnEnIf7Y5NxfRPfpb7dis6/gdlVI=
 github.com/dlclark/regexp2 v1.9.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
-github.com/tiktoken-go/tokenizer v0.1.1 h1:C0Y2gshVqVFvXlVXWAqCtzUJ3StcuxwHQ0zx26tL7mA=
-github.com/tiktoken-go/tokenizer v0.1.1/go.mod h1:7SZW3pZUKWLJRilTvWCa86TOVIiiJhYj3FQ5V3alWcg=
+github.com/tiktoken-go/tokenizer v0.2.0 h1:MqBlDeE5LRIEpapZk5s7COS9taGtRRIwM8bPxq13rI8=
+github.com/tiktoken-go/tokenizer v0.2.0/go.mod h1:7SZW3pZUKWLJRilTvWCa86TOVIiiJhYj3FQ5V3alWcg=
