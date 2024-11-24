@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/btnguyen2k/consu/gjrc v0.2.2
 	github.com/btnguyen2k/consu/reddo v0.1.9
-	github.com/tiktoken-go/tokenizer v0.2.0
+	github.com/tiktoken-go/tokenizer v0.2.1
 )
 
 require (
